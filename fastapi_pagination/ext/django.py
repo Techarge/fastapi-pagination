@@ -5,6 +5,7 @@ from django.db.models.base import ModelBase
 
 from ..api import create_page, resolve_params
 from ..bases import AbstractPage, AbstractParams
+from django.db.utils import DatabaseError
 
 T = TypeVar("T", bound=Model)
 
@@ -16,7 +17,11 @@ def paginate(query: Union[Type[T], QuerySet[T]], params: Optional[AbstractParams
     if isinstance(query, ModelBase):
         query = cast(Type[T], query).objects.all()
 
-    total = query.count()
+    try:
+        total = query.count()
+    except DatabaseError as ex:
+        total = len(query)
+        
     query = query.all()[raw_params.offset : raw_params.offset + raw_params.limit]
 
     return create_page([*query], total, params)
